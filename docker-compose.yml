@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lumina-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lumina
+      POSTGRES_PASSWORD: nRNQuB5caj6bqOwYDPyxap9Mj2S33Agg
+      POSTGRES_DB: lumina_ai
+    volumes:
+      - lumina_postgres_data:/var/lib/postgresql/data
+    networks:
+      - lumina-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lumina -d lumina_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: lumina-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - lumina_redis_data:/data
+    networks:
+      - lumina-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lumina-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgres://lumina:nRNQuB5caj6bqOwYDPyxap9Mj2S33Agg@postgres:5432/lumina_ai?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "8082:8082"
+    volumes:
+      - lumina_uploads:/app/uploads
+    networks:
+      - lumina-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lumina-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      - ORIGIN=https://luminaai.zesbe.my.id
+    ports:
+      - "3004:3000"
+    networks:
+      - lumina-network
+
+networks:
+  lumina-network:
+    driver: bridge
+
+volumes:
+  lumina_postgres_data:
+  lumina_redis_data:
+  lumina_uploads:

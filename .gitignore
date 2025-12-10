@@ -1,0 +1,23 @@
+# Environment
+.env
+*.env.local
+
+# Binary
+main
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads (user content)
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+*.log
